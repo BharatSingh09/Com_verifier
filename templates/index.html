@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Comparison Tool</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .button-group input[type="radio"] {
+            display: none;
+        }
+
+        .button-group label {
+            padding: 10px 20px;
+            border: 2px solid #007BFF;
+            border-radius: 5px;
+            background-color: white;
+            color: #007BFF;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .button-group input[type="radio"]:checked + label {
+            background-color: #007BFF;
+            color: white;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+        th { background-color: #f2f2f2; }
+        .match { background-color: #a3f3b6; }
+        .mismatch { background-color: #f0babe; }
+        .missing { background-color: #ae84f1; }
+        .error { background-color: #c44a56; }
+    </style>
+    
+</head>
+<body class="bg-gray-50 font-sans antialiased">
+
+    <div class="max-w-7xl mx-auto p-6">
+        <h1 class="text-3xl font-semibold text-center text-gray-800 mb-6">CSV Comparison Tool</h1>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label for="csv1_file" class="block text-lg text-gray-700">CSV1 (Combine file):</label>
+                <input type="file" name="csv1_file" id="csv1_file"
+                accept=".csv,text/csv"
+                class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            <div>
+                <label for="csv2_file" class="block text-lg text-gray-700">CSV2 (Config file):</label>
+                <input type="file" name="csv2_file" id="csv2_file"
+                accept=".csv,text/csv"
+                class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div class="button-group">
+                <input type="radio" id="btn1" name="selected" value="1" >
+                <label for="btn1">Dist(b/w)2Sig</label>
+
+                <input type="radio" id="btn2" name="selected" value="2">
+                <label for="btn2">Span</label>
+
+                <input type="radio" id="btn3" name="selected" value="3">
+                <label for="btn3">RFID</label>
+
+                <input type="radio" id="btn4" name="selected" value="4">
+                <label for="btn4">TLI(E/D)</label>
+
+                <input type="radio" id="btn5" name="selected" value="5">
+                <label for="btn5">RAT</label>
+
+                <input type="radio" id="btn6" name="selected" value="6">
+                <label for="btn6">A tag</label>
+
+            </div>
+            <div class="flex gap-4">
+                <button type="submit" class="flex-1 py-3 bg-blue-600 text-white text-lg font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Compare</button>
+                <button type="submit" name="new_file" value="new_file"
+                    class="flex-1 py-3 bg-gray-300 text-gray-800 text-lg font-semibold rounded-md hover:bg-gray-400">
+                    New File
+                </button>
+
+                <!-- <button type="reset" class="flex-1 py-3 bg-gray-300 text-gray-800 text-lg font-semibold rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">Reset</button> -->
+            </div>
+        </form>
+
+        {% if error %}
+            <p class="mt-4 text-red-600 text-lg text-center">{{ error }}</p>
+        {% endif %}
+
+        {% if result_data %}
+        <h2 class="text-2xl font-semibold text-gray-800 mt-8 mb-4 text-center">Comparison Result</h2>
+        <div class="overflow-x-auto bg-white rounded-lg shadow-lg">
+            <table class="min-w-full table-auto border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-700">
+                        {% for key in result_data[0].keys() %}
+                            <th class="px-4 py-3 text-left">{{ key.replace('_', ' ') }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in result_data %}
+                        <tr class="hover:bg-gray-50 {{ row['Status'] | lower | replace(' ', '-') }}">
+                            {% for value in row.values() %}
+                                <td class="px-4 py-2 border-b">{{ value }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+    </div>
+
+</body>
+</html>
