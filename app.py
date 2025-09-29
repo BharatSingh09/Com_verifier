@@ -46,22 +46,23 @@ def load_csv2_1(file,pattern):
             try:
                 value = row[3].strip()
                 if sno in mapping:
-                    mapping[sno] = (mapping[sno][0], mapping[sno][1] + value)  # (idx+1, sum of values)
+                    mapping[sno] = (mapping[sno][0], mapping[sno][1] + int(value))  # (idx+1, sum of values)
                 else:
-                    mapping[sno] = (idx + 1, value)
+                    mapping[sno] = (idx + 1, int(value))
             except ValueError:
                 pass
     return mapping
 
 def C_DistB2Sig(data1,data2):
     results = []
-    L=max(len(data1),len(data2))
-    for i in range(0,L):
+    i=0
+    L=min(len(data1),len(data2))
+    while i<L:
         if int(data1[i][0])==list(data2)[i]:
             Sno=data1[i][0]
             csv_1val=data1[i][1].replace(' ','')
-            csv_2val=data2[i+1][1].replace(' ','')
-            match_status='Match' if csv_1val==csv_2val else 'Mismatch'
+            csv_2val=data2[i+1][1]
+            match_status='Match' if int(csv_1val)==csv_2val else 'Mismatch'
             results.append({
                 'S.No': Sno,
                 'CSV1_Value': csv_1val,
@@ -93,6 +94,34 @@ def C_DistB2Sig(data1,data2):
                     'CSV2_Value': csv_2val,
                     'Status': match_status,
                 })
+        i+=1
+
+    while i<len(data1):
+        Sno=data1[i][0]
+        csv_1val=data1[i][1].replace(' ','')
+        csv_2val="No Data"
+        match_status='Missing'
+        results.append({
+            'S.No': Sno,
+            'CSV1_Value': csv_1val,
+            'Index': 'NO Data',
+            'CSV2_Value': csv_2val,
+            'Status': match_status,
+        })
+        i+=1
+    while i<len(list(data2)):
+        Sno=i+1
+        csv_1val="No Data"
+        csv_2val=data2[i+1][1]
+        match_status='Missing'
+        results.append({
+            'S.No': Sno,
+            'CSV1_Value': csv_1val,
+            'Index': data2[i+1][0],
+            'CSV2_Value': csv_2val,
+            'Status': match_status,
+        })
+        i+=1
     return results
 #end
 
@@ -194,6 +223,7 @@ def compare_data_3(csv1_data, csv2_data_1,csv2_data_2):
         try:
             sno = int(row[0])  # Get S.No from the first column
             csv1_val = row[column_index].strip() if row[column_index].strip() else 0
+            csv1_val=int(csv1_val)
             index_1, csv2_val_1 = csv2_data_1.get(sno, (None, None))
             index_2, csv2_val_2 = csv2_data_2.get(sno, (None, None))
             match_status = 'Match' if (csv2_val_1 == csv1_val) and  (csv2_val_1 == csv2_val_2) else 'Mismatch'
@@ -231,7 +261,7 @@ def Rat_csv1(file):
             #print(f"Skipping row with only {len(row)} columns: {row}")
             continue
 
-        # Delete in reverse order so indexes donâ€™t shift
+        # Delete in reverse order so indexes don’t shift
         for idx in [7, 6, 2, 0]:
             del row[idx]
 
@@ -365,6 +395,7 @@ def extract_csv1(cleaned_data):
                 match_dist+=int(j[0])
                 if match_dist==dist:
                         tag=j[1].replace('R-','')
+                        tag=str(int(tag))
             tin=i[20].replace(' ','')
             tin=tin.replace('(','').replace(')','')
             tin=tin.split('#')
@@ -532,10 +563,11 @@ def Tli_E_csv2(reader,Routes):
         pattern=re.compile(rf'appConfig.s4lgcConfig.routes\[{K}U\]\.tli.subPktType')
         match=pattern.search(reader[i][0])
         if match:
-            sub_pattern=re.compile(rf'appConfig.s4lgcConfig.routes\[{K}U\]\.ssp.subPktType')
+            sub_pattern=re.compile(rf'appConfig.s4lgcConfig.routes\[{K}U\]\.tli.adjLines')
+            sub_pattern_2=re.compile(rf'appConfig.s4lgcConfig.routes\[{K}U\]\.tli.adjTins\[(\d+)U\]')
             K+=1
             j=i
-            while not sub_pattern.search(reader[j][0]):
+            while j < len(reader) and not sub_pattern.search(reader[j][0]):
                 key=reader[j][0].split('.')
                 key=key[len(key)-1]
                 key=re.sub(r'\[\d+U\]', '', key)
@@ -547,7 +579,28 @@ def Tli_E_csv2(reader,Routes):
                 else:
                     mapping[K]={key:reader[j][3]}
                 j+=1
-            i=j
+            tli_count=int(reader[j][3])+1
+            key=reader[j][0].split('.')
+            key=key[len(key)-1]
+            key=re.sub(r'\[\d+U\]', '', key)
+            mapping[K][key]=reader[j][3]
+            j+=1
+            for n in range(0,tli_count):
+                if sub_pattern_2.search(reader[j][0]):
+                    key=reader[j][0].split('.')
+                    key=key[len(key)-1]
+                    key=re.sub(r'\[\d+U\]', '', key)
+                    if K in mapping:
+                        if key in mapping[K]:
+                            mapping[K][key]+=","+reader[j][3]
+                        else:
+                            mapping[K][key]=reader[j][3]
+                    else:
+                        mapping[K]={key:reader[j][3]}
+                    j+=1
+                else:
+                    break
+            i=j-1
         i+=1
     return mapping,i
 
@@ -694,6 +747,8 @@ def main():
             with open(session['csv2_path'], "r", encoding="utf-8") as f2:
                 rows = list(csv.reader(f2))
                 data2=Atag_csv2(rows,df1,pattern)
+            print(df1)
+            print(data2)
             results=Atag_compare(df1,data2)
             if len(results)==0:
                 results=[{'Status':'No Match Found'}]
@@ -721,7 +776,7 @@ if __name__ == "__main__":
     # Create the desktop window
     window = webview.create_window("My Flask App", "http://127.0.0.1:7363/", width=1000, height=700)
 
-    # When window closes â†’ also shut down Flask
+    # When window closes → also shut down Flask
     def on_closed():
         try:
             import requests
