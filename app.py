@@ -216,6 +216,23 @@ def C_Rfid(csv1_data,csv2_data):
 #end
 
 #Span Verifier
+def span_csv1(file,index):
+    reader = csv.reader(io.StringIO(file.read().decode('utf-8')))
+    rows = list(reader)
+    cleaned_data = []
+    a=-1
+    for row in rows[2:]:
+        if not row or not row[0].strip().isdigit():
+            if row[index].strip().isdigit():
+                cleaned_data[a][1]+=int(row[index])
+            continue
+        # Create a list of values based on the column indices
+        data = [row[0].strip() if 0 < len(row) else '' ] 
+        data.append(int(row[index].strip()) if (index < len(row)) and (row[index].strip().isdigit()) else '')
+        # Append the list to the cleaned_data list
+        cleaned_data.append(data)
+        a+=1
+    return cleaned_data
 def compare_data_3(csv1_data, csv2_data_1,csv2_data_2):
     results = []
     column_index=1
@@ -711,7 +728,7 @@ def main():
         elif order==2:
             index,pattern=my_dict[order]
             with open(session['csv1_path'], "rb") as f1:
-                data1=load_csv1(f1,index)
+                data1=span_csv1(f1,index)
             with open(session['csv2_path'], "rb") as f2:
                 data2=load_csv2_1(f2,pattern)
                 f2.seek(0)
