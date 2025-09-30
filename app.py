@@ -239,8 +239,7 @@ def compare_data_3(csv1_data, csv2_data_1,csv2_data_2):
     for row in csv1_data:
         try:
             sno = int(row[0])  # Get S.No from the first column
-            csv1_val = row[column_index].strip() if row[column_index].strip() else 0
-            csv1_val=int(csv1_val)
+            csv1_val = row[column_index] if row[column_index] else 0
             index_1, csv2_val_1 = csv2_data_1.get(sno, (None, None))
             index_2, csv2_val_2 = csv2_data_2.get(sno, (None, None))
             match_status = 'Match' if (csv2_val_1 == csv1_val) and  (csv2_val_1 == csv2_val_2) else 'Mismatch'
