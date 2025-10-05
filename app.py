@@ -13,11 +13,13 @@ pattern_2=re.compile(r'appConfig.s4lgcConfig.routes\[(\d+)U\]\.ssp\.speedInfo\[(
 pattern_3=re.compile(r'appConfig.s4lgcConfig.routes\[(\d+)U\]\.entrySigTagId')
 Span_pattern=re.compile(r'appConfig.aggrProfConfiguration.trackProf\[(\d+)U\]\.profSpan')
 pattern_6=re.compile(r'appConfig.s4lgcConfig.augTLI\[(\d+)U\]\.tagId')
+pattern_7=re.compile(r'appConfig.s4lgcConfig.routes\[(\d+)U\]\.noOfRouteSpans') 
 my_dict={
     1:(16,pattern_1),
     2:(34,pattern_2),
     3:(15,pattern_3),
-    6:(0,pattern_6)
+    6:(0,pattern_6),
+    7:(7,pattern_7)
 }
 # Dist Verifier
 def load_csv1(file,index):
@@ -689,6 +691,117 @@ def compare_Tli_Enco_Deco(map_2,map_3,df):
     return results2
 #end
 
+#nRoutes
+
+def map_aspect(value):
+    value = value.lower()
+    if 'green' in value:
+        return 11
+    elif 'blank' in value:
+        return 0
+    elif 'double' in value:
+        return 10
+    elif 'yellow' in value:
+        return 2
+    elif 'red' in value:
+        return 1
+    elif 'miniature' in value:
+        return 15
+    else:
+        return 51
+def map_aspect_str(code):
+    reverse_map = {
+        11: 'Green',
+        10: 'Double Yellow',
+        2: 'Yellow',
+        0: 'undefine',
+        1:'Red',
+        15:'Miniature',
+        51: '-'
+    }
+    return reverse_map.get(code)
+    
+
+def nRoutes_csv1(file,index):
+    reader = csv.reader(io.StringIO(file.read().decode('utf-8')))
+    rows = list(reader)
+    cleaned_data = []
+    a=-1
+    for row in rows[2:]:
+        if not row or not row[0].strip().isdigit():
+            cleaned_data[a].append((row[index].strip(),row[index+1].strip()))
+            continue
+        # Create a list of values based on the column indices
+        data = [row[0].strip() if 0 < len(row) else '' ] 
+        #entry and exit signal for future
+        data.append((row[index].strip(),row[index+1].strip()))
+        # Append the list to the cleaned_data list
+        cleaned_data.append(data)
+        a+=1
+    return cleaned_data
+
+def load_csv2_NRoutes(reader,pattern):
+    mapping={}
+    i=0
+    while(i<len((reader))):
+        match=pattern.search(reader[i][0])
+        if match:
+            span_count=reader[i][3]
+            inner_list=[]
+            k=int(match.group(1))
+            Asp1_p=re.compile(rf'appConfig.s4lgcConfig.routes\[{k}U\]\.routeSpans\[(\d+)U\]\.entrySigAsp.reqSigAspect1')
+            Asp2_p=re.compile(rf'appConfig.s4lgcConfig.routes\[{k}U\]\.routeSpans\[(\d+)U\]\.exitSigAsp.reqSigAspect1')
+            entry_sig=re.compile(rf'appConfig.s4lgcConfig.routes\[{k}U\]\.routeSpans\[(\d+)U\]\.entrySigAsp.signalId')
+            exit_sig=re.compile(rf'appConfig.s4lgcConfig.routes\[{k}U\]\.routeSpans\[(\d+)U\]\.exitSigAsp.signalId')
+            sec_check=re.compile(rf'appConfig.s4lgcConfig.routes\[{k}U\]\.requiredPointsNormal\[(\d+)U\]')
+            while(i<len(reader)):
+                if sec_check.search(reader[i][0]):
+                    break
+                if entry_sig.search(reader[i][0]) and int(reader[i][3])==0 and exit_sig.search(reader[i+4][0]) and int(reader[i+4][3])==0:
+                    break 
+                if Asp1_p.search(reader[i][0]) and Asp2_p.search(reader[i+4][0]):
+                    if entry_sig.search(reader[i-1][0]) and int(reader[i-1][3])==0:
+                        Asp1=51
+                    else:
+                        Asp1=int(reader[i][3])
+                    if exit_sig.search(reader[i+3][0]) and int(reader[i+3][3])==0:
+                        Asp2=51
+                    else:
+                        Asp2=int(reader[i+4][3])
+                    inner_list.append((Asp1,Asp2))
+                    i+=4
+                i+=1
+            mapping[k+1]=(span_count,inner_list)
+        i+=1
+    return mapping
+
+def compare_nRoute(data1,data2):
+    result=[]
+    for i in range(0,len(data1)):
+        sno=int(data1[i][0])
+        span=len(data1[i])-1
+        d2_span=int(data2[sno][0])
+        d2_val=data2[sno][1]
+        if span == d2_span:
+            j=0
+            while(j<span):
+                d1_Entry=map_aspect(data1[i][j+1][0])
+                d1_Exit=map_aspect(data1[i][j+1][1])
+                d2_Entry=map_aspect_str(d2_val[j][0])
+                d2_Exit=map_aspect_str(d2_val[j][1])
+                match_status='Match' if d1_Entry==d2_val[j][0] and d1_Exit==d2_val[j][1] else 'Mismatch'
+                result.append({
+                    'Sno':sno,
+                    'Csv1_Entry_ Asp':data1[i][j+1][0],
+                    'Csv2_Entry_ Asp':d2_Entry if (d2_Entry is not None) else d2_val[j][0] ,
+                    'Csv1_EXit_ Asp':data1[i][j+1][1],
+                    'Csv2_Exit_ Asp':d2_Exit if (d2_Exit is not None) else d2_val[j][1],
+                    'Status':match_status,
+                })
+                j+=1
+    return result
+#end
+
 
 @app.route('/', methods=['GET', 'POST'])
 def main():
@@ -768,6 +881,14 @@ def main():
             results=Atag_compare(df1,data2)
             if len(results)==0:
                 results=[{'Status':'No Match Found'}]
+        elif order==7:
+            index,pattern=my_dict[order]
+            with open(session['csv1_path'], "rb") as f1:
+                data1=nRoutes_csv1(f1,index)
+            with open(session['csv2_path'], "r", encoding="utf-8") as f2:
+                rows = list(csv.reader(f2))
+                data2=load_csv2_NRoutes(rows,pattern)
+            results=compare_nRoute(data1,data2)
         else:
             return render_template("index.html", error="Wrong Type Selected", session=session)
     
