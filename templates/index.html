@@ -8,6 +8,29 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        .button-group label {
+            position: relative;
+        }
+        .button-group label::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 5px;
+            opacity: 0;
+            pointer-events: none;
+            white-space: nowrap;
+            transition: opacity 0.2s;
+            font-size: 0.85rem;
+        }
+        .button-group label:hover::after {
+            opacity: 1;
+        }
+
         .button-group {
             display: flex;
             gap: 8px;
@@ -48,42 +71,79 @@
 
         <form method="post" enctype="multipart/form-data" class="space-y-4">
             <div>
-                <label for="csv1_file" class="block text-lg text-gray-700">CSV1 (Combine file):</label>
-                <input type="file" name="csv1_file" id="csv1_file"
-                accept=".csv,text/csv"
-                class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label for="csv1_file" class="block text-lg text-gray-700">TOC Track Prof Combine file:</label>
+                <div class="flex">
+                    <div>
+                        <input type="file" name="csv1_file" id="csv1_file"
+                        accept=".csv,text/csv"
+                        class=" p-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        {% if session.csv1_name %}
+                            <p class="text-m text-black-600 p-3 ">Uploaded: {{ session.csv1_name }}</p>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-
             <div>
-                <label for="csv2_file" class="block text-lg text-gray-700">CSV2 (Config file):</label>
-                <input type="file" name="csv2_file" id="csv2_file"
-                accept=".csv,text/csv"
-                class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label for="csv2_file" class="block text-lg text-gray-700">Config file:</label>
+                <div class="flex">
+                    <div>
+                        <input type="file" name="csv2_file" id="csv2_file"
+                        accept=".csv,text/csv"
+                        class=" p-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        {% if session.csv2_name %}
+                            <p class="text-m text-black-600 p-3 ">Uploaded: {{ session.csv2_name }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div>
+                <label for="RAT_file" class="block text-lg text-gray-700">RAT File:</label>
+                <div class="flex">
+                    <div>
+                        <input type="file" name="RAT_file" id="RAT_file"
+                        accept=".csv,text/csv"
+                        class=" p-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        {% if session.rat_name %}
+                            <p class="text-m text-black-600 p-3 ">Uploaded: {{ session.rat_name }}</p>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
             <div class="button-group">
-                <input type="radio" id="btn1" name="selected" value="1" >
-                <label for="btn1">Dist(b/w)2Sig</label>
+                <input type="radio" id="btn1" name="selected" value="1">
+                <label for="btn1" title="Compare distances between Entry and Exit signals">Dist(b/w)2Sig</label>
 
                 <input type="radio" id="btn2" name="selected" value="2">
-                <label for="btn2">Span</label>
+                <label for="btn2" title="Compare Span from profSpan and ssp dist">Span</label>
 
                 <input type="radio" id="btn3" name="selected" value="3">
-                <label for="btn3">RFID</label>
+                <label for="btn3" title="Verify RFID Tag sequence w">RFID</label>
 
                 <input type="radio" id="btn4" name="selected" value="4">
-                <label for="btn4">TLI(E/D)</label>
+                <label for="btn4" title="Compare TLI Encoder and Decoder data of config">TLI(E/D)</label>
 
                 <input type="radio" id="btn5" name="selected" value="5">
-                <label for="btn5">RAT</label>
+                <label for="btn5" title="Check RAT data ">RAT</label>
 
                 <input type="radio" id="btn6" name="selected" value="6">
-                <label for="btn6">A tag</label>
+                <label for="btn6" title="Validate A-Tag mapping">A tag</label>
 
                 <input type="radio" id="btn7" name="selected" value="7">
-                <label for="btn7">nRoutes</label>
+                <label for="btn7" title="Compare nRoute signal id and Aspect">nRoutes</label>
 
+                <input type="radio" id="btn8" name="selected" value="8">
+                <label for="btn8" title="Compare Points data from Rat to config">Points</label>
+
+                <input type="radio" id="btn9" name="selected" value="9">
+                <label for="btn9" title="Compare TPR data from Rat to config">TPR</label>
             </div>
-            <div class="flex gap-4">
+                        <div class="flex gap-4">
                 <button type="submit" class="flex-1 py-3 bg-blue-600 text-white text-lg font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Compare</button>
                 <button type="submit" name="new_file" value="new_file"
                     class="flex-1 py-3 bg-gray-300 text-gray-800 text-lg font-semibold rounded-md hover:bg-gray-400">
@@ -97,6 +157,9 @@
         {% if error %}
             <p class="mt-4 text-red-600 text-lg text-center">{{ error }}</p>
         {% endif %}
+        {%if message%}
+            <p class="mt-4 text-lg text-center">{{ message }}</p>
+        {% endif%}
 
         {% if result_data %}
         <h2 class="text-2xl font-semibold text-gray-800 mt-8 mb-4 text-center">Comparison Result</h2>
