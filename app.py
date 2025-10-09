@@ -13,7 +13,7 @@ pattern_2=re.compile(r'appConfig.s4lgcConfig.routes\[(\d+)U\]\.ssp\.speedInfo\[(
 pattern_3=re.compile(r'appConfig.s4lgcConfig.routes\[(\d+)U\]\.entrySigTagId')
 Span_pattern=re.compile(r'appConfig.aggrProfConfiguration.trackProf\[(\d+)U\]\.profSpan')
 pattern_6=re.compile(r'appConfig.s4lgcConfig.augTLI\[(\d+)U\]\.tagId')
-pattern_7=re.compile(r'appConfig.s4lgcConfig.routes\[(\d+)U\]\.noOfRouteSpans') 
+pattern_7=re.compile(r'appConfig.s4lgcConfig.routes\[(\d+)U\]\.noOfRouteSpans')
 my_dict={
     1:(16,pattern_1),
     2:(34,pattern_2),
@@ -32,6 +32,8 @@ def load_csv1(file,index):
         # Create a list of values based on the column indices
         data = [row[0].strip() if 0 < len(row) else '' ] 
         data.append(row[index].strip() if index < len(row) else '')
+        data.append(row[1])
+        data.append(row[2])
         # Append the list to the cleaned_data list
         cleaned_data.append(data)
     return cleaned_data
@@ -66,7 +68,9 @@ def C_DistB2Sig(data1,data2):
             csv_2val=data2[i+1][1]
             match_status='Match' if int(csv_1val)==csv_2val else 'Mismatch'
             results.append({
-                'S.No': Sno,
+                'Route No': Sno,
+                'Entry Signal':data1[i][2],
+                'Exit Signal':data1[i][3],
                 'CSV1_Value': csv_1val,
                 'Index': data2[i+1][0],
                 'CSV2_Value': csv_2val,
@@ -79,7 +83,9 @@ def C_DistB2Sig(data1,data2):
                 csv_1val=data1[i][1].replace(' ','')
                 match_status='Missing'
                 results.append({
-                    'S.No': Sno,
+                    'Route No': Sno,
+                    'Entry Signal':data1[i][2],
+                    'Exit Signal':data1[i][3],
                     'CSV1_Value': csv_1val,
                     'Index':'No Data',
                     'CSV2_Value': 'No Data',
@@ -90,7 +96,9 @@ def C_DistB2Sig(data1,data2):
                 csv_2val=data2[i+1][1].replace(' ','')
                 match_status='Missing'
                 results.append({
-                    'S.No': Sno,
+                    'Route No': Sno,
+                    'Entry Signal':"No Data",
+                    'Exit Signal':"No Data",
                     'CSV1_Value': 'No Data',
                     'Index': data2[i+1][0],
                     'CSV2_Value': csv_2val,
@@ -104,7 +112,9 @@ def C_DistB2Sig(data1,data2):
         csv_2val="No Data"
         match_status='Missing'
         results.append({
-            'S.No': Sno,
+            'Route No': Sno,
+            'Entry Signal':data1[i][2],
+            'Exit Signal':data1[i][3],
             'CSV1_Value': csv_1val,
             'Index': 'NO Data',
             'CSV2_Value': csv_2val,
@@ -117,7 +127,9 @@ def C_DistB2Sig(data1,data2):
         csv_2val=data2[i+1][1]
         match_status='Missing'
         results.append({
-            'S.No': Sno,
+            'Route No': Sno,
+            'Entry Signal':"No Data",
+            'Exit Signal':"No Data",
             'CSV1_Value': csv_1val,
             'Index': data2[i+1][0],
             'CSV2_Value': csv_2val,
@@ -203,7 +215,7 @@ def C_Rfid(csv1_data,csv2_data):
                     match_status = 'Missing'
 
                 results.append({
-                    'S.No': sno,
+                    'Route No': sno,
                     'CSV1_Dist': csv1_item_1,
                     'CSV1_RFID':csv1_item_2,
                     'Index': index_val,
@@ -231,10 +243,13 @@ def span_csv1(file,index):
         # Create a list of values based on the column indices
         data = [row[0].strip() if 0 < len(row) else '' ] 
         data.append(int(row[index].strip()) if (index < len(row)) and (row[index].strip().isdigit()) else '')
+        data.append(row[1])
+        data.append(row[2])
         # Append the list to the cleaned_data list
         cleaned_data.append(data)
         a+=1
     return cleaned_data
+
 def compare_data_3(csv1_data, csv2_data_1,csv2_data_2):
     results = []
     column_index=1
@@ -246,7 +261,9 @@ def compare_data_3(csv1_data, csv2_data_1,csv2_data_2):
             index_2, csv2_val_2 = csv2_data_2.get(sno, (None, None))
             match_status = 'Match' if (csv2_val_1 == csv1_val) and  (csv2_val_1 == csv2_val_2) else 'Mismatch'
             results.append({
-                'S.No': sno,
+                'Route No': sno,
+                'Entry Signal':row[2],
+                'Exit Signal':row[3],
                 'CSV1_Value': csv1_val,
                 'Index_1': index_1,
                 'CSV2_Value_1': csv2_val_1 if csv2_val_1 is not None else 'Not Found',
@@ -256,7 +273,7 @@ def compare_data_3(csv1_data, csv2_data_1,csv2_data_2):
             })
         except (ValueError, KeyError, IndexError):  # Handle missing or incorrect data
             results.append({
-                'S.No': row[0] if len(row) > 0 else 'Unknown',  # Assuming 'S.No' is in the first column
+                'Route No': row[0] if len(row) > 0 else 'Unknown',  # Assuming 'S.No' is in the first column
                 'CSV1_Value': row[column_index] if len(row) > column_index else 'Invalid',  # Handle invalid data
                 'CSV2_Value': 'Error',
                 'Status': 'Error'
@@ -330,12 +347,13 @@ def Rat_csv2(file):
                 result.append(sub_list)
 
                 if (int(port_match.group(1)) + 1)==int(relay_no):
-                    return result
-    return result
+                    return result,relay_no
+    return result,relay_no
 
-def compare_Rat_data(df1,df2):
+def compare_Rat_data(df1,df2,relay_no):
     len_val = max(len(df1), len(df2)) 
-    results=[]    
+    results=[]
+    msg=f"No of relays in config = {relay_no} and No of relays in RAT = {len(df1)}"
     for i in range(0,len_val):
         if i>=len(df1):
             df1_relayid='No Data'
@@ -370,7 +388,7 @@ def compare_Rat_data(df1,df2):
             'CSV2_PORT':df2_port,
             'Status': match_status
         })
-    return results
+    return results,msg
 # end
 
 
@@ -400,6 +418,7 @@ def extract_csv1(cleaned_data):
         adj_info=adj_info.replace('(','').replace(')','').replace(' ','')
         adj_info=adj_info.split('#')
         if adj_info[0]=='1':
+            # print(i)
             tag=''
             dist=int(adj_info[1])
             dom=adj_info[2]
@@ -682,7 +701,7 @@ def compare_Tli_Enco_Deco(map_2,map_3,df):
 
         for data in sec_tabel:
             results2.append({
-                'S.No': sno,
+                'Route No': sno,
                 'Name':data,
                 'Encoded':sec_tabel[data][0],
                 'Decoded':sec_tabel[data][1],
@@ -692,7 +711,6 @@ def compare_Tli_Enco_Deco(map_2,map_3,df):
 #end
 
 #nRoutes
-
 def map_aspect(value):
     value = value.lower()
     if 'green' in value:
@@ -733,6 +751,7 @@ def nRoutes_csv1(file,index):
             continue
         # Create a list of values based on the column indices
         data = [row[0].strip() if 0 < len(row) else '' ] 
+        data.append((row[1],row[2]))
         #entry and exit signal for future
         data.append((row[index].strip(),row[index+1].strip()))
         # Append the list to the cleaned_data list
@@ -763,50 +782,234 @@ def load_csv2_NRoutes(reader,pattern):
                     if entry_sig.search(reader[i-1][0]) and int(reader[i-1][3])==0:
                         Asp1=51
                     else:
+                        entry_asp=int(reader[i-1][3])
                         Asp1=int(reader[i][3])
                     if exit_sig.search(reader[i+3][0]) and int(reader[i+3][3])==0:
                         Asp2=51
                     else:
+                        exit_asp=int(reader[i+3][3])
                         Asp2=int(reader[i+4][3])
-                    inner_list.append((Asp1,Asp2))
+                    inner_list.append((Asp1,Asp2,entry_asp,exit_asp))
                     i+=4
                 i+=1
             mapping[k+1]=(span_count,inner_list)
         i+=1
     return mapping
 
-def compare_nRoute(data1,data2):
+def compare_nRoute(data1,data2,rat_data):
     result=[]
     for i in range(0,len(data1)):
         sno=int(data1[i][0])
-        span=len(data1[i])-1
+        span=len(data1[i])-2
         d2_span=int(data2[sno][0])
         d2_val=data2[sno][1]
+        # print(f'span:{span} d2 span:{d2_span}')
         if span == d2_span:
             j=0
             while(j<span):
-                d1_Entry=map_aspect(data1[i][j+1][0])
-                d1_Exit=map_aspect(data1[i][j+1][1])
+                entry=d2_val[j][2]
+                exit=d2_val[j][3]
+                entry_name=data1[i][1][0]
+                exit_name=data1[i][1][1]
+                d1_Entry=map_aspect(data1[i][j+2][0])
+                d1_Exit=map_aspect(data1[i][j+2][1])
                 d2_Entry=map_aspect_str(d2_val[j][0])
                 d2_Exit=map_aspect_str(d2_val[j][1])
-                match_status='Match' if d1_Entry==d2_val[j][0] and d1_Exit==d2_val[j][1] else 'Mismatch'
+                rat_entry=rat_data[entry] if entry in rat_data else 'Not Found'
+                rat_exit=rat_data[exit] if exit in rat_data else 'Not Found'
+                match_status='Match' if (d1_Entry==d2_val[j][0]) and (d1_Exit==d2_val[j][1]) and (entry_name==rat_entry) and (exit_name==rat_exit) else 'Mismatch'
                 result.append({
                     'Sno':sno,
-                    'Csv1_Entry_ Asp':data1[i][j+1][0],
-                    'Csv2_Entry_ Asp':d2_Entry if (d2_Entry is not None) else d2_val[j][0] ,
-                    'Csv1_EXit_ Asp':data1[i][j+1][1],
-                    'Csv2_Exit_ Asp':d2_Exit if (d2_Exit is not None) else d2_val[j][1],
+                    'CSV1 Entry Name':entry_name,
+                    'CSV2 Entry Name':f"{rat_entry}, {entry}",
+                    'Csv1_Entry_ Asp':data1[i][j+2][0],
+                    'Csv2_Entry_ Asp':f"{d2_Entry if (d2_Entry is not None) else ''}, {d2_val[j][0]}" ,
+                    'CSV1 Exit Name':exit_name,
+                    'CSV2 Exit Name':f"{rat_exit}, {exit}",
+                    'Csv1_EXit_ Asp':data1[i][j+2][1],
+                    'Csv2_Exit_ Asp':f"{d2_Exit if (d2_Exit is not None) else ''}, {d2_val[j][1]}",
                     'Status':match_status,
                 })
                 j+=1
     return result
+
+def load_Rat(file):
+    reader = csv.reader(io.StringIO(file.read().decode('utf-8')))
+    rows = list(reader)
+    mapping={}
+    for row in rows:
+        if ';' in row[0]:
+            continue
+        if ('DECPR' not in row[0]) and ('HHECPR' not in row[0]) and ('HECPR' not in row[0]) and ('RECPR' not in row[0]):
+            continue
+        sig_name=row[0].replace('DECPR','').replace('HHECPR','').replace('HECPR','').replace('RECPR','')
+        sig_id=int(row[2]) if row[2].isdigit() else 0
+        if sig_name not in mapping:
+            mapping[sig_id]=sig_name
+    return mapping
 #end
 
+#points
+def load_Rat_Points(file):
+    reader = csv.reader(io.StringIO(file.read().decode('utf-8')))
+    rows = list(reader)
+    mapping = {}
+
+    for row in rows:
+        if not row or ';' in row[0]:
+            continue
+
+        if 'RWKPR' not in row[0] and 'NWKPR' not in row[0]:
+            continue
+
+        # Extract numeric fields safely
+        value = int(row[1]) if len(row) > 1 and row[1].isdigit() else 0
+        point_id = int(row[2]) if len(row) > 2 and row[2].isdigit() else 0
+
+        # Ensure mapping entry exists and is a 2-element list
+        if point_id not in mapping:
+            mapping[point_id] = [0, 0]  # [NWKPR, RWKPR]
+
+        if 'NWKPR' in row[0]:
+            mapping[point_id][0] = value
+        elif 'RWKPR' in row[0]:
+            mapping[point_id][1] = value
+
+    return mapping
+
+def load_csv2_Points(reader):
+    mapping={}
+    pattern=re.compile(rf'appConfig.fldinConfig.point2Relay\[(\d+)U\]\.pointId')
+    i=0
+    while(i<len((reader))):
+        match=pattern.search(reader[i][0])
+        if match:
+            k=int(match.group(1))
+            point_id=int(reader[i][3]) if reader[i][3].isdigit() else 0
+            nor_pattern=re.compile(rf'appConfig.fldinConfig.point2Relay\[{k}U\]\.relayIdx_normal')
+            rev_pattern=re.compile(rf'appConfig.fldinConfig.point2Relay\[{k}U\]\.relayIdx_reverse')
+            if nor_pattern.search(reader[i+1][0]) and rev_pattern.search(reader[i+2][0]):
+                mapping[point_id]=[int(reader[i+1][3]) if reader[i+1][3].isdigit() else 0,int(reader[i+2][3]) if reader[i+2][3].isdigit() else 0]
+                i+=2
+            else:
+               i+=1
+        else:
+            i+=1
+    return mapping
+
+def compare_points(data1,data2):
+    result=[]
+    for point in data1:
+        if point in data2:
+            match_status='Match' if (data1[point][0]==data2[point][0]) and (data1[point][1]==data2[point][1]) else 'Missmatch'
+            result.append({
+                'Point ID':point,
+                'RAT Normal':data1[point][0],
+                'Config Normal':data2[point][0],
+                'RAT Reverse':data1[point][1],
+                'Config Reverse':data2[point][1],
+                'Status':match_status
+            })
+            del data2[point]
+        else:
+            result.append({
+                'Point ID':point,
+                'RAT Normal':data1[point][0],
+                'Config Normal':'No data',
+                'RAT Reverse':data1[point][1],
+                'Config Reverse':'No data',
+                'Status':'Missing'
+            })
+    for point in data2:
+        result.append({
+            'Point ID':point,
+            'RAT Normal':'No data',
+            'Config Normal':data2[point][0],
+            'RAT Reverse':'No data',
+            'Config Reverse':data2[point][1],
+            'Status':'Missing'
+        })
+    return result
+
+#end
+
+#Tpr
+def load_Rat_Tpr(file):
+    reader = csv.reader(io.StringIO(file.read().decode('utf-8')))
+    rows = list(reader)
+    mapping = {}
+
+    for row in rows:
+        if not row or ';' in row[0]:
+            continue
+
+        if 'TPR' not in row[0]:
+            continue
+
+        # Extract numeric fields safely
+        index = int(row[1]) if len(row) > 1 and row[1].isdigit() else 0
+        TPR_Id = int(row[2]) if len(row) > 2 and row[2].isdigit() else 0
+
+        # Ensure mapping entry exists and is a 2-element list
+        if TPR_Id not in mapping:
+            mapping[TPR_Id] = index  # 
+
+    return mapping
+
+def load_csv2_Tpr(reader):
+    mapping={}
+    pattern=re.compile(rf'appConfig.fldinConfig.tpr2Relay\[(\d+)U\]\.tprId')
+    i=0
+    while(i<len((reader))):
+        match=pattern.search(reader[i][0])
+        if match:
+            tprid=int(reader[i][3]) if reader[i][3].isdigit() else 0
+            idx_pattern=re.compile(rf'appConfig.fldinConfig.tpr2Relay\[(\d+)U\]\.relayIdx')
+            if idx_pattern.search(reader[i+1][0]):
+                idx=int(reader[i+1][3]) if reader[i+1][3].isdigit() else 0
+                if tprid not in mapping:
+                    mapping[tprid]=idx
+                i+=2
+            else:
+                i+=1
+        else:
+            i+=1
+    return mapping
+
+def compare_Tpr(data1,data2):
+    result=[]
+    for tprid in data1:
+        if tprid in data2:
+            match_status='Match' if (data1[tprid]==data2[tprid]) else 'Missmatch'
+            result.append({
+                'TPR ID':tprid,
+                'RAT Index':data1[tprid],
+                'Config Index':data2[tprid],
+                'Status':match_status
+            })
+            del data2[tprid]
+        else:
+            result.append({
+                'TPR ID':tprid,
+                'RAT Index':data1[tprid],
+                'Config Index':'No data',
+                'Status':'Missing'
+            })
+    for tprid in data2:
+        result.append({
+            'TPR ID':tprid,
+            'RAT Index':'No data',
+            'Config Index':data2[tprid],
+            'Status':'Missing'
+        })
+    return result
+
+#end
 
 @app.route('/', methods=['GET', 'POST'])
 def main():
     results = []
-
+    message=''
     if request.method == 'POST':
         if "new_file" in request.form:
             session.clear()
@@ -814,19 +1017,30 @@ def main():
 
         csv1_file = request.files.get('csv1_file')
         csv2_file = request.files.get('csv2_file')
+        rat_file = request.files.get('RAT_file')
         order= request.form.get('selected')
         if csv1_file:
             temp1 = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
             csv1_file.save(temp1.name)
             session['csv1_path'] = temp1.name
+            session['csv1_name'] = csv1_file.filename 
 
         if csv2_file:
             temp2 = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
             csv2_file.save(temp2.name)
             session['csv2_path'] = temp2.name
+            session['csv2_name'] = csv2_file.filename
 
-        if 'csv1_path' not in session or 'csv2_path' not in session:
-            return render_template("index.html", error="Please provide both CSV", session=session)
+        if rat_file:
+            temp2 = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
+            rat_file.save(temp2.name)
+            session['rat_path'] = temp2.name
+            session['rat_name'] = rat_file.filename
+
+
+
+        if 'csv1_path' not in session or 'csv2_path' not in session or 'rat_path' not in session:
+            return render_template("index.html", error="Please provide CSV", session=session)
         if order is None:
             return render_template("index.html", error="Please select a Function", session=session)
         order=int(order)
@@ -863,11 +1077,12 @@ def main():
                 map_3, index = Tli_D_csv2(rows, Routes)
             results= compare_Tli_Enco_Deco(map_2, map_3, df1)
         elif order==5:
-            with open(session['csv1_path'], "rb") as f1:
+            with open(session['rat_path'], "rb") as f1:
                 data1=Rat_csv1(f1)
             with open(session['csv2_path'], "rb") as f2:
-                data2=Rat_csv2(f2)
-            results=compare_Rat_data(data1,data2)
+                data2,relay_no=Rat_csv2(f2)
+            results,msg=compare_Rat_data(data1,data2,relay_no)
+            message=msg
         elif order==6:
             index,pattern=my_dict[order]
             with open(session['csv1_path'], "rb") as f1:
@@ -876,23 +1091,39 @@ def main():
             with open(session['csv2_path'], "r", encoding="utf-8") as f2:
                 rows = list(csv.reader(f2))
                 data2=Atag_csv2(rows,df1,pattern)
-            print(df1)
-            print(data2)
+            # print(df1)
+            # print(data2)
             results=Atag_compare(df1,data2)
             if len(results)==0:
                 results=[{'Status':'No Match Found'}]
         elif order==7:
             index,pattern=my_dict[order]
+            with open(session['rat_path'], "rb") as f1:
+                rat_data=load_Rat(f1)
             with open(session['csv1_path'], "rb") as f1:
                 data1=nRoutes_csv1(f1,index)
             with open(session['csv2_path'], "r", encoding="utf-8") as f2:
                 rows = list(csv.reader(f2))
                 data2=load_csv2_NRoutes(rows,pattern)
-            results=compare_nRoute(data1,data2)
+            results=compare_nRoute(data1,data2,rat_data)
+        elif order ==8:
+            with open(session['rat_path'], "rb") as f1:
+                data1 = load_Rat_Points(f1)
+            with open(session['csv2_path'], "r", encoding="utf-8") as f2:
+                rows = list(csv.reader(f2))
+                data2=load_csv2_Points(rows)
+            results=compare_points(data1,data2)
+        elif order ==9:
+            with open(session['rat_path'], "rb") as f1:
+                data1 = load_Rat_Tpr(f1)
+            with open(session['csv2_path'], "r", encoding="utf-8") as f2:
+                rows = list(csv.reader(f2))
+                data2=load_csv2_Tpr(rows)
+            results=compare_Tpr(data1,data2)
         else:
             return render_template("index.html", error="Wrong Type Selected", session=session)
     
-    return render_template("index.html", result_data=results, session=session)
+    return render_template("index.html", result_data=results,message=message, session=session)
 
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
